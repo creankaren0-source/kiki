@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip --version)",
+      "Bash(python:*)",
+      "Bash(find /c/Users/14989/hackathon -name *INDEX* -o -name *prompt* -o -name *debug*)",
+      "Bash(find /c/Users/14989/Downloads /c/Users/14989/Desktop -maxdepth 3 -name *.py)",
+      "Bash(curl -s http://localhost:8000/prompt/history)",
+      "Bash(curl -v http://localhost:8000/prompt/history)",
+      "Bash(curl -s http://127.0.0.1:3000/prompttest.html)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://unpkg.com/vue@3/dist/vue.global.prod.js)",
+      "Bash(curl -sL https://unpkg.com/vue@3/dist/vue.global.prod.js -o vue.global.prod.js)"
+    ]
+  }
+}

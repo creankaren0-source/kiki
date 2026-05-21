@@ -1,0 +1,26 @@
+{
+  "name": "发发 · AI 发型顾问",
+  "short_name": "发发",
+  "description": "你的口袋发型设计助手",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#E0F7FA",
+  "theme_color": "#4ECDC4",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>发发 · 提示词调试</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh}
+.app{max-width:960px;margin:0 auto;padding:24px 16px}
+h1{font-size:22px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.tabs{display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid #e5e7eb}
+.tab{padding:8px 16px;border:none;background:none;cursor:pointer;font-size:14px;color:#6b7280;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.2s}
+.tab.active{color:#1a1a2e;border-bottom-color:#4ecdc4;font-weight:600}
+.panel{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 3px #0000000d}
+.panel h3{font-size:15px;font-weight:600;margin-bottom:6px;color:#374151}
+.panel .hint{font-size:12px;color:#9ca3af;margin-bottom:12px}
+textarea{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;line-height:1.6;resize:vertical;font-family:inherit;color:#1a1a2e;outline:none}
+textarea:focus{border-color:#4ecdc4;box-shadow:0 0 0 2px #4ecdc422}
+.actions{display:flex;gap:8px;margin-top:12px}
+.btn{padding:8px 18px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:.2s}
+.btn-primary{background:#4ecdc4;color:#fff}
+.btn-primary:hover{background:#3dbdb4}
+.btn-secondary{background:#f3f4f6;color:#374151}
+.btn-secondary:hover{background:#e5e7eb}
+.btn-danger{background:#fee2e2;color:#dc2626}
+.btn-danger:hover{background:#fecaca}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.section-divider{height:1px;background:#f3f4f6;margin:24px 0}
+.version-bar{display:flex;align-items:center;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid #f3f4f6}
+.version-badge{font-size:12px;color:#6b7280;background:#f9fafb;padding:4px 10px;border-radius:999px}
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>🧚&nbsp; 提示词调试面板</h1>
+
+  <!-- 标签页 -->
+  <div class="tabs">
+    <button class="tab" :class="{active: activeTab==='system'}" @click="switchTab('system')">Agent 提示词</button>
+    <button class="tab" :class="{active: activeTab==='analyze'}" @click="switchTab('analyze')">脸型分析</button>
+    <button class="tab" :class="{active: activeTab==='change'}" @click="switchTab('change')">发型更换</button>
+  </div>
+
+  <!-- Agent 提示词 -->
+  <div class="panel" v-show="activeTab==='system'">
+    <h3>System Prompt</h3>
+    <p class="hint">Agent 的系统提示词，决定小美的角色定位和行为规则</p>
+    <textarea v-model="forms.system" rows="10"></textarea>
+    <div class="actions">
+      <button class="btn btn-primary" @click="savePrompt" :disabled="saving">💾 保存并生效</button>
+      <button class="btn btn-secondary" @click="resetCurrent">↺ 重置当前</button>
+    </div>
+  </div>
+
+  <!-- 脸型分析 -->
+  <div class="panel" v-show="activeTab==='analyze'">
+    <h3>工具描述</h3>
+    <p class="hint">Agent 看到这个描述，决定何时调用脸型分析工具</p>
+    <textarea v-model="forms.analyze_desc" rows="3"></textarea>
+    <div class="section-divider"></div>
+    <h3>分析 Prompt</h3>
+    <p class="hint>实际发给 vision 模型的提示词，控制脸型分析的输出格式</p>
+    <textarea v-model="forms.analyze_prompt" rows="8"></textarea>
+    <div class="actions">
+      <button class="btn btn-primary" @click="savePrompt" :disabled="saving">💾 保存并生效</button>
+      <button class="btn btn-secondary" @click="resetCurrent">↺ 重置当前</button>
+    </div>
+  </div>
+
+  <!-- 发型更换 -->
+  <div class="panel" v-show="activeTab==='change'">
+    <h3>工具描述</h3>
+    <p class="hint">Agent 看到这个描述，决定何时调用换发工具</p>
+    <textarea v-model="forms.change_desc" rows="3"></textarea>
+    <div class="section-divider"></div>
+    <h3>换发 Prompt</h3>
+    <p class="hint">实际发给图像编辑模型的提示词，`{hair_desc}` 会被用户输入替换</p>
+    <textarea v-model="forms.change_prompt" rows="8"></textarea>
+    <div class="actions">
+      <button class="btn btn-primary" @click="savePrompt" :disabled="saving">💾 保存并生效</button>
+      <button class="btn btn-secondary" @click="resetCurrent">↺ 重置当前</button>
+    </div>
+  </div>
+
+  <!-- 版本历史 -->
+  <div class="panel" style="margin-top:16px">
+    <h3>📋 版本历史</h3>
+    <div v-if="history.length===0" style="color:#9ca3af;font-size:13px;padding:12px 0">暂无历史版本</div>
+    <div v-for="v in history" :key="v.version" style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px">
+      <span class="version-badge">v{{v.version}}</span>
+      <span style="color:#6b7280">{{v.time}}</span>
+      <span style="flex:1;color:#374151">{{v.note||'（无备注）'}}</span>
+      <button class="btn btn-secondary" style="padding:4px 12px;font-size:12px" @click="rollback(v.version)">回滚</button>
+    </div>
+  </div>
+
+  <div v-if="msg" style="margin-top:12px;padding:10px 14px;border-radius:8px;font-size:13px"
+       :style="{background: msgType==='ok'?'#d1fae5':'#fee2e2', color: msgType==='ok'?'#065f46':'#991b1b'}">{{msg}}</div>
+</div>
+
+<script>
+const API = "http://localhost:8000";
+const defaults = {};
+
+const { createApp, ref, reactive, onMounted } = Vue;
+
+createApp({
+  setup() {
+    const activeTab = ref('system');
+    const saving = ref(false);
+    const msg = ref('');
+    const msgType = ref('ok');
+    const history = ref([]);
+    const forms = reactive({
+      system: '',
+      analyze_desc: '',
+      change_desc: '',
+      analyze_prompt: '',
+      change_prompt: ''
+    });
+
+    function showMsg(text, type='ok') {
+      msg.value = text;
+      msgType.value = type;
+      setTimeout(() => msg.value = '', 3000);
+    }
+
+    async function loadHistory() {
+      try {
+        const r = await fetch(API + "/prompt/history");
+        const d = await r.json();
+        // 如果 forms 还没值（首次加载），用 current 填充
+        if (!forms.system) {
+          forms.system = d.current.system || '';
+          forms.analyze_desc = d.current.analyze_desc || '';
+          forms.change_desc = d.current.change_desc || '';
+          forms.analyze_prompt = d.current.analyze_prompt || '';
+          forms.change_prompt = d.current.change_prompt || '';
+        }
+        // 存一份默认值供重置用
+        Object.assign(defaults, JSON.parse(JSON.stringify(forms)));
+        history.value = d.history || [];
+      } catch(e) {
+        showMsg('加载失败：请确认后端服务已在 http://localhost:8000 启动', 'err');
+      }
+    }
+
+    async function savePrompt() {
+      saving.value = true;
+      try {
+        const fd = new FormData();
+        fd.append('system', forms.system);
+        fd.append('analyze_desc', forms.analyze_desc);
+        fd.append('change_desc', forms.change_desc);
+        fd.append('analyze_prompt', forms.analyze_prompt);
+        fd.append('change_prompt', forms.change_prompt);
+        fd.append('note', `调试 ${activeTab.value}`);
+        const r = await fetch(API + "/prompt/update", { method: "POST", body: fd });
+        const d = await r.json();
+        showMsg(`✅ 已保存（版本 ${d.version}），新对话立即生效`);
+        await loadHistory();
+      } catch(e) {
+        showMsg('保存失败：' + e.message, 'err');
+      } finally {
+        saving.value = false;
+      }
+    }
+
+    async function rollback(version) {
+      if (!confirm(`确定回滚到 v${version}？当前修改将丢失。`)) return;
+      try {
+        const r = await fetch(API + `/prompt/rollback/${version}`, { method: "POST" });
+        const d = await r.json();
+        if (d.error) { showMsg(d.error, 'err'); return; }
+        showMsg(`✅ 已回滚到 v${version}`);
+        await loadHistory();
+      } catch(e) {
+        showMsg('回滚失败：' + e.message, 'err');
+      }
+    }
+
+    function resetCurrent() {
+      const key = activeTab.value === 'system' ? 'system'
+                : activeTab.value === 'analyze' ? 'analyze_prompt'
+                : 'change_prompt';
+      if (defaults[key]) forms[key] = defaults[key];
+      showMsg('已重置为初始值（未保存）');
+    }
+
+    function switchTab(tab) {
+      activeTab.value = tab;
+      msg.value = '';
+    }
+
+    onMounted(loadHistory);
+
+    return { activeTab, forms, history, saving, msg, msgType, savePrompt, rollback, resetCurrent, switchTab };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>页面验证</title>
+</head>
+<body>
+<div id="app">
+  <h2>正在检查...</h2>
+</div>
+<script>
+// 检查 Vue 加载
+const checkVue = setInterval(() => {
+  if (window.Vue) {
+    clearInterval(checkVue);
+    const { createApp, ref, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const status = ref('checking');
+        const messages = ref([]);
+
+        onMounted(async () => {
+          // 测试后端 API
+          try {
+            const r = await fetch('http://localhost:8000/prompt/history');
+            const d = await r.json();
+            messages.value.push('✅ 后端 API 连接成功');
+            messages.value.push('📝 获取到 prompts: ' + Object.keys(d.current).length + ' 个');
+          } catch(e) {
+            messages.value.push('❌ 后端 API 失败: ' + e.message);
+          }
+
+          // 测试 Vue 文件加载
+          messages.value.push('✅ Vue 加载成功');
+          status.value = 'ready';
+        });
+
+        return { status, messages };
+      },
+      template: `
+        <div>
+          <h2 v-if="status === 'ready'">✅ 验证完成</h2>
+          <h2 v-else>⏳ 检查中...</h2>
+          <ul>
+            <li v-for="(msg, i) in messages" :key="i" style="margin:8px 0;font-size:14px">{{msg}}</li>
+          </ul>
+          <div v-if="status === 'ready'" style="margin-top:20px;padding:12px;background:#d1fae5;border-radius:8px">
+            <p>如果看到此页面，说明 Vue 和后端 API 都正常工作。</p>
+            <p style="margin-top:8px"><a href="http://localhost:3000/prompttest.html">👉 点击打开完整的 Prompt Test 页面</a></p>
+          </div>
+        </div>
+      `
+    }).mount('#app');
+  }
+}, 100);
+</script>
+<script src="./vue.global.prod.js"></script>
+</body>
+</html>

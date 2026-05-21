@@ -50,3 +50,8 @@ logs/
 
 # --- Runtime uploads (FastAPI user images) ---
 uploads/
+
+# --- Secrets / env ---
+.env
+.env.*
+!.env.example

@@ -1,0 +1,21 @@
+{
+  "name": "hair-advisor-tests",
+  "version": "1.0.0",
+  "description": "发发 AI 发型顾问 - 测试套件",
+  "scripts": {
+    "test:backend": "cd ../hair-advisor && python -m pytest ../tests/test_backend_api.py -v --tb=short",
+    "test:backend:coverage": "cd ../hair-advisor && python -m pytest ../tests/test_backend_api.py --cov=agent --cov=analyze_face --cov=change_hair --cov-report=html",
+    "test:frontend": "npx playwright test",
+    "test:frontend:ui": "npx playwright test --ui",
+    "test:frontend:debug": "npx playwright test --debug",
+    "test:frontend:report": "npx playwright show-report",
+    "test:all": "npm run test:backend && npm run test:frontend",
+    "test:smoke": "npx playwright test --grep \"冒烟测试\"",
+    "test:scenarios": "echo '场景测试请参考 TEST_SCENARIOS.md 手动执行'",
+    "prepare:fixtures": "node tests/fixtures/create_test_images.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "typescript": "^5.3.0"
+  }
+}

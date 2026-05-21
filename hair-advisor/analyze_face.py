@@ -2,15 +2,20 @@ import os
 import base64
 from openai import OpenAI
 from dotenv import load_dotenv
+import httpx
 
 load_dotenv()
 
 STEP_API_KEY = os.getenv("STEP_API_KEY")
 STEP_BASE_URL = os.getenv("STEP_BASE_URL", "https://api.stepfun.com/v1")
 
-client = OpenAI(api_key=STEP_API_KEY, base_url=STEP_BASE_URL)
+client = OpenAI(
+    api_key=STEP_API_KEY,
+    base_url=STEP_BASE_URL,
+    timeout=httpx.Timeout(30.0, connect=10.0)
+)
 
-DEFAULT_PROMPT = """请分析这张照片中人物的脸型，按以下格式回答：
+DEFAULT_PROMPT = """请分析这张照片中人物的脸型，禁止对照片进行改动，只能做分析并按以下格式回答：
 脸型：[圆脸/方脸/长脸/鹅蛋脸/心形脸/菱形脸]
 特点：[简要描述面部特点]
 推荐发型：[列出3款适合的发型]
@@ -36,7 +41,7 @@ def analyze_face(image_path: str, prompt: str = DEFAULT_PROMPT) -> str:
             img_base64 = base64.b64encode(f.read()).decode()
 
         response = client.chat.completions.create(
-            model="step-1v-8k",
+            model="deepseek-chat",
             messages=[{
                 "role": "user",
                 "content": [
@@ -48,5 +53,7 @@ def analyze_face(image_path: str, prompt: str = DEFAULT_PROMPT) -> str:
         )
         return response.choices[0].message.content
 
+    except httpx.TimeoutException:
+        return "分析超时（30秒），请上传更清晰的照片后重试"
     except Exception as e:
         return f"分析失败：{str(e)}"
